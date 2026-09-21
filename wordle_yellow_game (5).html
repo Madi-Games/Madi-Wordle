@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Madi Wordle</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap');
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #a9c99f;
+    font-family: 'Baloo 2', 'Comic Sans MS', sans-serif;
+    color: #20252b;
+    display: flex;
+    justify-content: center;
+  }
+  .app {
+    position: relative;
+    z-index: 1;
+    width: min(720px, 96vw);
+    padding: 22px 16px 30px;
+    text-align: center;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .logo {
+    font-size: clamp(32px, 7vw, 52px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    color: #b88919;
+    text-align: left;
+  }
+  .logo span {
+    background: linear-gradient(135deg, #fff3a6, #d4af37, #f7df78);
+    color: #6f5412;
+    padding: 0 8px 2px;
+    border-radius: 7px;
+  }
+  button, select {
+    font: inherit;
+  }
+  .topbtn {
+    background-image: linear-gradient(135deg, #fff3a6 0%, #d4af37 38%, #f7df78 55%, #b88919 100%);
+    box-shadow: 0 2px 6px rgba(120, 88, 10, .25);
+
+    border: 2px solid #d4af37;
+    background: linear-gradient(135deg, #fff3a6, #d4af37, #f7df78, #b88919);
+    color: #f7fcf7;
+    border-radius: 9px;
+    padding: 10px 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .settings {
+    box-shadow: 0 3px 10px rgba(120, 88, 10, .18);
+    display: none;
+    background: #f8efd0;
+    border: 3px solid #b88919;
+    border-radius: 14px;
+    padding: 14px;
+    margin: 0 auto 18px;
+    text-align: left;
+  }
+  .settings.open { display: block; }
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  label { font-weight: 800; }
+  select {
+    width: 100%;
+    margin-top: 5px;
+    padding: 8px;
+    border: 2px solid #b88919;
+    border-radius: 8px;
+    background: white;
+  }
+  .newgame {
+    background: linear-gradient(135deg, #fff3a6, #d4af37 45%, #b88919);
+    box-shadow: 0 2px 6px rgba(120, 88, 10, .22);
+
+    margin-top: 12px;
+    width: 100%;
+    background: #b88919;
+    color: white;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  #message {
+    min-height: 27px;
+    font-weight: 800;
+    margin: 4px 0 12px;
+  }
+  #board {
+    display: grid;
+    gap: 7px;
+    justify-content: center;
+    margin: 0 auto 22px;
+  }
+  .row {
+    display: grid;
+    gap: 7px;
+  }
+  .tile {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    background: #e9eef0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #b88919;
+  }
+  .tile.correct { background: #62b86b; color: white; }
+  .tile.present { background: #f2c84b; color: white; }
+  .tile.absent { background: #8793a3; color: white; }
+  #keyboard {
+    display: grid;
+    gap: 7px;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+  .keyrow {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+  }
+  .key {
+    min-width: 38px;
+    height: 48px;
+    border: 0;
+    border-radius: 5px;
+    background: #edf0df;
+    color: #b88919;
+    font-weight: 900;
+    cursor: pointer;
+  }
+  .key.wide { min-width: 62px; }
+  .key.correct { background: #62b86b; color: white; }
+  .key.present { background: #f2c84b; color: white; }
+  .key.absent { background: #8793a3; color: white; }
+  .hint {
+    margin-top: 16px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  @media (max-width: 520px) {
+    .tile { width: 44px; height: 44px; font-size: 22px; }
+    .key { min-width: 29px; height: 45px; }
+    .key.wide { min-width: 48px; }
+  }
+
+  .app {
+    position: relative;
+  }
+  /* Gold diamond sparkles: sides only, never over game controls */
+  .sparkles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    color: #d4af37;
+  }
+  .sparkles span {
+    position: absolute;
+    font-size: 18px;
+    font-weight: 900;
+    opacity: .82;
+    line-height: 1;
+  }
+
+  /* Left side */
+  .sparkles span:nth-child(1) { left: 3.5vw; top: 18vh; }
+  .sparkles span:nth-child(2) { left: 7vw; top: 33vh; font-size: 13px; }
+  .sparkles span:nth-child(3) { left: 2.5vw; top: 51vh; }
+  .sparkles span:nth-child(4) { left: 7vw; top: 67vh; font-size: 14px; }
+
+  /* Right side */
+  .sparkles span:nth-child(5) { right: 3.5vw; top: 18vh; }
+  .sparkles span:nth-child(6) { right: 7vw; top: 34vh; font-size: 13px; }
+  .sparkles span:nth-child(7) { right: 2.5vw; top: 52vh; }
+  .sparkles span:nth-child(8) { right: 7vw; top: 68vh; font-size: 14px; }
+
+  @media (max-width: 900px) {
+    .sparkles { display: none; }
+  }
+
+  .hint {
+    color: #4f765e;
+  }
+
+</style>
+</head>
+<body>
+<div class="sparkles">
+  <span>◆</span><span>✦</span><span>◇</span><span>◆</span>
+  <span>✦</span><span>◇</span><span>◆</span><span>✦</span>
+</div>
+<div class="app">
+  <header>
+    <div class="logo">Madi <span>Wordle</span></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="topbtn" id="restartBtn">↻ Restart</button>
+      <button class="topbtn" id="settingsBtn">⚙ Settings</button>
+    </div>
+  </header>
+
+  <div class="settings" id="settings">
+    <div class="settings-grid">
+      <label>Letters
+        <select id="length">
+          <option>2</option><option>3</option><option selected>4</option><option>5</option>
+        </select>
+      </label>
+      <label>Guesses
+        <select id="guesses">
+          <option>5</option><option selected>6</option><option>7</option><option>8</option>
+        </select>
+      </label>
+    </div>
+    <button class="newgame" id="newGame">New Game</button>
+  </div>
+
+  <div id="message"></div>
+  <div id="board"></div>
+  <div id="keyboard"></div>
+  <div class="hint">Type with your keyboard or tap the letters. Restart whenever you want!</div>
+</div>
+
+<script>
+const words = {
+  2: ["AM", "AN", "AS", "AT", "BE", "BY", "DO", "GO", "HE", "IF", "IN", "IS", "IT", "ME", "MY", "NO", "OF", "OH", "OK", "ON", "OR", "SO", "TO", "UP", "US", "WE"],
+  3: ["ALL", "AND", "ANY", "ARE", "ART", "BAD", "BAT", "BED", "BIG", "BOX", "BOY", "BUG", "BUS", "CAN", "CAR", "CAT", "CUP", "DAY", "DOG", "EAR", "EAT", "END", "EYE", "FUN", "GET", "GOT", "HAT", "HEN", "HIM", "HIS", "HOT", "HOW", "JAM", "JOY", "KEY", "KID", "LET", "MAP", "MEN", "MOM", "NET", "NEW", "NOT", "NOW", "ONE", "PEN", "PET", "PIG", "RUN", "SAD", "SEE", "SHE", "SIT", "SUN", "THE", "TIP", "TOP", "TOY", "TWO", "USE", "WAY", "WHO", "WIN", "YES", "YOU"],
+  4: ["ABLE", "ACID", "AGED", "AREA", "ARMY", "BABY", "BACK", "BALL", "BANK", "BEAR", "BEAT", "BEEF", "BELL", "BIRD", "BLUE", "BOAT", "BOOK", "CAKE", "CALM", "CAMP", "CARD", "CARE", "COLD", "COME", "COOK", "COOL", "DARK", "DEAL", "DEEP", "DOOR", "DOWN", "DRAW", "DROP", "EACH", "EASY", "EDGE", "FACE", "FACT", "FAIR", "FALL", "FARM", "FAST", "FEEL", "FIRE", "FISH", "FIVE", "FLEW", "FOOD", "FOOT", "FREE", "FROG", "FROM", "GAME", "GATE", "GIVE", "GLOW", "GOAL", "GOLD", "GOOD", "HAND", "HARD", "HEAD", "HEAR", "HEAT", "HELP", "HOME", "HOPE", "IDEA", "JUMP", "KEEP", "KIND", "KING", "KITE", "LAMP", "LAND", "LAST", "LATE", "LIFE", "LIKE", "LINE", "LION", "LIST", "LIVE", "LONG", "LOOK", "LOVE", "LUCK", "MAKE", "MANY", "MATH", "MEAL", "MIND", "MOON", "MORE", "MOST", "MOVE", "NAME", "NEAR", "NICE", "NOTE", "OPEN", "OVER", "PAGE", "PARK", "PART", "PATH", "PLAY", "RAIN", "READ", "REAL", "ROAD", "ROOM", "SAME", "SAND", "SHIP", "SHOP", "SHOW", "SING", "SIZE", "SLOW", "SNOW", "SOME", "STAR", "STAY", "STEP", "STOP", "SWIM", "TAKE", "TALK", "TEAM", "TELL", "TIME", "TREE", "TRUE", "TURN", "TYPE", "VERY", "WALK", "WALL", "WARM", "WAVE", "WEEK", "WELL", "WIND", "WING", "WITH", "WORD", "WORK"],
+  5: ["APPLE", "BEACH", "BRAIN", "BREAD", "BRICK", "BRING", "BROWN", "CHAIR", "CHESS", "CHILD", "CLOUD", "COAST", "COUCH", "CRANE", "CRAZY", "CREAM", "DREAM", "DRINK", "EARTH", "EIGHT", "FAIRY", "FANCY", "FIELD", "FLAME", "FLOOR", "FLOUR", "FRUIT", "GHOST", "GIANT", "GLASS", "GRAIN", "GRAPE", "GREEN", "HAPPY", "HEART", "HOUSE", "JUICE", "LIGHT", "MOUSE", "MUSIC", "NIGHT", "OCEAN", "PARTY", "PEACH", "PHONE", "PIANO", "PLANT", "PLATE", "POINT", "QUEEN", "QUICK", "QUIET", "RIVER", "ROBOT", "ROUND", "SCALE", "SHARE", "SHEEP", "SLEEP", "SMILE", "SNAKE", "SOUND", "SPACE", "SPORT", "STAGE", "STAND", "STORM", "STORY", "SUGAR", "SWEET", "TABLE", "TIGER", "TRAIN", "TRUCK", "WATER", "WHALE", "WHITE", "WORLD", "WRITE", "YOUTH"],
+  6: ["ALWAYS", "ANSWER", "AUTUMN", "BASKET", "BEAUTY", "BOTTLE", "BRIGHT", "BUTTER", "CANDLE", "CIRCLE", "COLOUR", "COOKIE", "DANGER", "DINNER", "DRAGON", "EASILY", "FAMILY", "FATHER", "FLOWER", "FRIEND", "GARDEN", "GENTLE", "GOLDEN", "HAMMER", "HEALTH", "ISLAND", "JACKET", "JUNGLE", "KITTEN", "LITTLE", "MARKET", "MIDDLE", "MIRROR", "MONKEY", "MOTHER", "ORANGE", "PEOPLE", "PICNIC", "PLANET", "POCKET", "PURPLE", "SCHOOL", "SECRET", "SHADOW", "SIMPLE", "SISTER", "SMOOTH", "SUMMER", "SUNSET", "TICKET", "TRAVEL", "TURTLE", "WINTER", "YELLOW"],
+  7: ["ANOTHER", "BALLOON", "BICYCLE", "BROTHER", "CAPTAIN", "CHICKEN", "CRICKET", "DOLPHIN", "FREEDOM", "FRIENDS", "HOLIDAY", "KITCHEN", "LANTERN", "MORNING", "MYSTERY", "PAINTED", "PENGUIN", "PERFECT", "PICTURE", "RAINBOW", "READING", "TEACHER", "THUNDER", "UNICORN"],
+  8: ["BASEBALL", "ELEPHANT", "FIREWORK", "FOOTBALL", "NOTEBOOK", "SANDWICH", "TREASURE"],
+  9: ["ADVENTURE", "BREAKFAST", "CHOCOLATE", "DANGEROUS", "ELEPHANTS", "PLAYHOUSE", "SOMETHING"],
+  10: ["EVERYTHING", "PLAYGROUND", "STRAWBERRY", "WATERMELON"],
+  11: ["CELEBRATION", "PLAYGROUNDS", "WATERMELONS"]
+};
+
+let length = 5, maxGuesses = 6, answer = "", row = 0, current = "", over = false;
+const board = document.getElementById("board");
+const keyboard = document.getElementById("keyboard");
+const message = document.getElementById("message");
+
+function setMessage(t) { message.textContent = t; }
+
+function newGame() {
+  length = +document.getElementById("length").value;
+  maxGuesses = +document.getElementById("guesses").value;
+  const pool = words[length] || words[4];
+  answer = pool[Math.floor(Math.random() * pool.length)].toUpperCase();
+  row = 0; current = ""; over = false;
+  makeBoard(); makeKeyboard();
+  setMessage("");
+}
+
+function makeBoard() {
+  board.innerHTML = "";
+  board.style.gridTemplateRows = `repeat(${maxGuesses}, 1fr)`;
+  for (let r=0; r<maxGuesses; r++) {
+    const rowEl = document.createElement("div");
+    rowEl.className = "row";
+    rowEl.style.gridTemplateColumns = `repeat(${length}, 1fr)`;
+    for (let c=0; c<length; c++) {
+      const t = document.createElement("div");
+      t.className = "tile";
+      rowEl.appendChild(t);
+    }
+    board.appendChild(rowEl);
+  }
+}
+
+const keys = ["QWERTYUIOP","ASDFGHJKL","ZXCVBNM"];
+function makeKeyboard() {
+  keyboard.innerHTML = "";
+  keys.forEach((line, i) => {
+    const r = document.createElement("div"); r.className="keyrow";
+    if (i === 2) {
+      const back = document.createElement("button");
+      back.className="key wide"; back.textContent="⌫"; back.onclick=backspace; r.appendChild(back);
+    }
+    [...line].forEach(ch => {
+      const b=document.createElement("button");
+      b.className="key"; b.textContent=ch; b.dataset.key=ch; b.onclick=()=>press(ch);
+      r.appendChild(b);
+    });
+    if (i === 2) {
+      const enter=document.createElement("button");
+      enter.className="key wide"; enter.textContent="Enter"; enter.onclick=submit; r.appendChild(enter);
+    }
+    keyboard.appendChild(r);
+  });
+}
+
+function updateTiles() {
+  const tiles = board.children[row].children;
+  for (let i=0;i<length;i++) tiles[i].textContent=current[i]||"";
+}
+
+function press(ch) {
+  if (over || current.length >= length) return;
+  current += ch; updateTiles();
+}
+function backspace() {
+  if (over) return;
+  current = current.slice(0,-1); updateTiles();
+}
+
+function submit() {
+  if (over) return;
+  if (current.length !== length) { setMessage(`Enter a ${length}-letter word.`); return; }
+  const guess=current;
+  if (!/^[A-Z]+$/.test(guess) || guess.length !== length) {
+    setMessage(`Enter a ${length}-letter word.`);
+    return;
+  }
+  const tiles=board.children[row].children;
+  const counts={};
+  [...answer].forEach(ch => counts[ch]=(counts[ch]||0)+1);
+  // First pass: exact matches
+  const states=Array(length).fill("absent");
+  [...guess].forEach((ch,i)=>{
+    if (ch===answer[i]) { states[i]="correct"; counts[ch]--; }
+  });
+  // Second pass: present letters
+  [...guess].forEach((ch,i)=>{
+    if (states[i]==="correct") return;
+    if ((counts[ch]||0)>0) { states[i]="present"; counts[ch]--; }
+  });
+  for(let i=0;i<length;i++) {
+    tiles[i].textContent=guess[i];
+    tiles[i].className="tile "+states[i];
+    const key=document.querySelector(`[data-key="${guess[i]}"]`);
+    if(key) {
+      if(states[i]==="correct") key.className="key correct";
+      else if(states[i]==="present" && !key.classList.contains("correct")) key.className="key present";
+      else if(states[i]==="absent" && !key.classList.contains("correct") && !key.classList.contains("present")) key.className="key absent";
+    }
+  }
+  if (guess===answer) {
+    setMessage("You got it! 🎉");
+    over=true; return;
+  }
+  row++;
+  current="";
+  if(row>=maxGuesses) { setMessage(`The answer was ${answer}.`); over=true; }
+  else setMessage("");
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key==="Enter") submit();
+  else if (e.key==="Backspace") backspace();
+  else if (/^[a-zA-Z]$/.test(e.key)) press(e.key.toUpperCase());
+});
+document.getElementById("settingsBtn").onclick=()=>document.getElementById("settings").classList.toggle("open");
+document.getElementById("restartBtn").onclick=newGame;
+document.getElementById("newGame").onclick=newGame;
+document.getElementById("length").onchange=newGame;
+document.getElementById("guesses").onchange=newGame;
+newGame();
+</script>
+</body>
+</html>
